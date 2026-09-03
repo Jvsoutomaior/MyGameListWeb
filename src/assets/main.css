@@ -351,12 +351,72 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
   padding: 1.5rem 0;
   border-bottom: 1px solid var(--line);
 }
 .game-row h2,
 .game-row p {
   margin-bottom: 0.25rem;
+}
+.game-row-main,
+.game-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.game-row-main {
+  min-width: 0;
+}
+.game-row-actions {
+  flex-shrink: 0;
+}
+.game-cover-small {
+  display: grid;
+  flex: 0 0 64px;
+  place-items: center;
+  width: 64px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  color: var(--line);
+  background: var(--ink);
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+.game-cover-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.game-comment {
+  display: -webkit-box;
+  max-width: 620px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.danger-button {
+  padding: 0.85rem 1rem;
+  color: #982715;
+  background: transparent;
+  border: 1px solid #d99a8d;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.danger-button:hover {
+  background: #fee7e2;
+}
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 @media (max-width: 720px) {
@@ -393,5 +453,18 @@ h1 {
   }
   .list-dialog {
     padding: 1.5rem;
+  }
+  .game-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .game-row-actions {
+    width: 100%;
+    justify-content: space-between;
+    padding-left: 80px;
+  }
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }
