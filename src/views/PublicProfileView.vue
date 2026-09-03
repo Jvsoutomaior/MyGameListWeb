@@ -4,11 +4,14 @@ import { useRoute } from 'vue-router'
 
 import { ApiError, apiRequest } from '@/api/http'
 import type { GameListEntry, Page, User } from '@/api/types'
+import PaginationControls from '@/components/PaginationControls.vue'
 import { gameStatusLabels } from '@/domain/game-status'
 
 const route = useRoute()
 const user = ref<User | null>(null)
 const entries = ref<GameListEntry[]>([])
+const listPage = ref<Page<GameListEntry> | null>(null)
+const listLoading = ref(false)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const username = computed(() => String(route.params.username))
@@ -25,9 +28,10 @@ async function loadProfile(): Promise<void> {
     const encodedUsername = encodeURIComponent(username.value)
     const [profile, list] = await Promise.all([
       apiRequest<User>(`/api/users/${encodedUsername}`),
-      apiRequest<Page<GameListEntry>>(`/api/users/${encodedUsername}/games`),
+      fetchPublicList(0),
     ])
     user.value = profile
+    listPage.value = list
     entries.value = list.content
   } catch (error) {
     errorMessage.value =
@@ -38,6 +42,29 @@ async function loadProfile(): Promise<void> {
           : 'Não foi possível carregar este perfil.'
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchPublicList(pageNumber: number): Promise<Page<GameListEntry>> {
+  const encodedUsername = encodeURIComponent(username.value)
+  return apiRequest<Page<GameListEntry>>(
+    `/api/users/${encodedUsername}/games?page=${pageNumber}&size=20`,
+  )
+}
+
+async function loadPublicList(pageNumber: number): Promise<void> {
+  listLoading.value = true
+  errorMessage.value = null
+
+  try {
+    const page = await fetchPublicList(pageNumber)
+    listPage.value = page
+    entries.value = page.content
+  } catch (error) {
+    errorMessage.value =
+      error instanceof ApiError ? error.message : 'Não foi possível carregar a lista.'
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -74,7 +101,10 @@ function formatMemberSince(createdAt: string): string {
       <section class="public-list-heading">
         <div>
           <p class="eyebrow">Biblioteca</p>
-          <h2>{{ entries.length }} {{ entries.length === 1 ? 'jogo' : 'jogos' }}</h2>
+          <h2>
+            {{ listPage?.totalElements ?? 0 }}
+            {{ listPage?.totalElements === 1 ? 'jogo' : 'jogos' }}
+          </h2>
         </div>
       </section>
 
@@ -99,6 +129,13 @@ function formatMemberSince(createdAt: string): string {
           <strong>{{ entry.score === null ? 'Sem nota' : `${entry.score}/10` }}</strong>
         </li>
       </ul>
+      <PaginationControls
+        v-if="listPage"
+        :page="listPage.page"
+        :total-pages="listPage.totalPages"
+        :disabled="listLoading"
+        @change="loadPublicList"
+      />
     </template>
   </main>
 </template>

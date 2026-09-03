@@ -496,6 +496,23 @@ h1 {
 .public-list-heading h2 {
   font-size: 2rem;
 }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+.pagination span {
+  color: var(--muted);
+  font-weight: 700;
+}
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 @media (max-width: 720px) {
   .site-header {
@@ -559,5 +576,12 @@ h1 {
     align-items: flex-start;
     flex-direction: column;
     gap: 1.25rem;
+  }
+  .pagination {
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .pagination .secondary-button {
+    padding-inline: 0.75rem;
   }
 }

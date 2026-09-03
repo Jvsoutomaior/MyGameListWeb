@@ -36,7 +36,13 @@ test('allows a visitor to search and asks for login before adding', async ({ pag
   await page.route('http://localhost:8080/api/games?*', (route) =>
     route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ content: [game], page: 0, size: 20, totalElements: 1 }),
+      body: JSON.stringify({
+        content: [game],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+      }),
     }),
   )
 
@@ -62,7 +68,13 @@ test('adds a catalog game to the authenticated user list', async ({ page }) => {
   await page.route('http://localhost:8080/api/games?*', (route) =>
     route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ content: [game], page: 0, size: 20, totalElements: 1 }),
+      body: JSON.stringify({
+        content: [game],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+      }),
     }),
   )
   await page.route('http://localhost:8080/api/auth/csrf', (route) =>
@@ -125,10 +137,16 @@ test('edits and removes an entry from the authenticated user list', async ({ pag
       body: JSON.stringify({ token: 'masked-value', headerName: 'X-XSRF-TOKEN' }),
     }),
   )
-  await page.route('http://localhost:8080/api/me/games', (route) =>
+  await page.route('http://localhost:8080/api/me/games?*', (route) =>
     route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ content: [entry], page: 0, size: 20, totalElements: 1 }),
+      body: JSON.stringify({
+        content: [entry],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+      }),
     }),
   )
   await page.route(`http://localhost:8080/api/me/games/${game.id}`, async (route) => {
@@ -192,7 +210,7 @@ test('finds and displays another user public profile', async ({ page }) => {
       }),
     }),
   )
-  await page.route('http://localhost:8080/api/users/playerone/games', (route) =>
+  await page.route('http://localhost:8080/api/users/playerone/games?*', (route) =>
     route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -210,6 +228,7 @@ test('finds and displays another user public profile', async ({ page }) => {
         page: 0,
         size: 20,
         totalElements: 1,
+        totalPages: 1,
       }),
     }),
   )

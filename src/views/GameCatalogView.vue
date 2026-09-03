@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { ApiError, apiRequest } from '@/api/http'
 import type { Game, GameListEntry, GameStatus, Page } from '@/api/types'
 import AuthFormError from '@/components/AuthFormError.vue'
+import PaginationControls from '@/components/PaginationControls.vue'
 import { gameStatusOptions } from '@/domain/game-status'
 import { useAuthStore } from '@/stores/auth'
 
@@ -12,6 +13,8 @@ const auth = useAuthStore()
 const router = useRouter()
 const query = ref('')
 const games = ref<Game[]>([])
+const resultPage = ref<Page<Game> | null>(null)
+const activeQuery = ref('')
 const searched = ref(false)
 const searching = ref(false)
 const searchError = ref<string | null>(null)
@@ -23,20 +26,31 @@ const adding = ref(false)
 const addError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
-async function search(): Promise<void> {
+async function submitSearch(): Promise<void> {
   const normalizedQuery = query.value.trim()
   if (!normalizedQuery) return
 
+  activeQuery.value = normalizedQuery
+  await loadGames(0)
+}
+
+async function loadGames(pageNumber: number): Promise<void> {
   searching.value = true
   searched.value = true
   searchError.value = null
   successMessage.value = null
 
   try {
-    const params = new URLSearchParams({ query: normalizedQuery, page: '0', size: '20' })
+    const params = new URLSearchParams({
+      query: activeQuery.value,
+      page: String(pageNumber),
+      size: '20',
+    })
     const page = await apiRequest<Page<Game>>(`/api/games?${params}`)
+    resultPage.value = page
     games.value = page.content
   } catch (error) {
+    resultPage.value = null
     games.value = []
     searchError.value =
       error instanceof ApiError ? error.message : 'Não foi possível pesquisar o catálogo.'
@@ -96,7 +110,7 @@ async function addToList(): Promise<void> {
     <header class="page-heading">
       <p class="eyebrow">Catálogo compartilhado</p>
       <h1>Encontre seu próximo jogo.</h1>
-      <form class="search-form" role="search" @submit.prevent="search">
+      <form class="search-form" role="search" @submit.prevent="submitSearch">
         <label class="sr-only" for="game-query">Nome do jogo</label>
         <input
           id="game-query"
@@ -137,6 +151,14 @@ async function addToList(): Promise<void> {
         </div>
       </li>
     </ul>
+
+    <PaginationControls
+      v-if="resultPage"
+      :page="resultPage.page"
+      :total-pages="resultPage.totalPages"
+      :disabled="searching"
+      @change="loadGames"
+    />
 
     <div v-if="selectedGame" class="dialog-backdrop" @click.self="closeForm">
       <section class="list-dialog" role="dialog" aria-modal="true" aria-labelledby="add-title">

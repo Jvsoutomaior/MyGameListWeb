@@ -4,9 +4,11 @@ import { onMounted, ref } from 'vue'
 import { ApiError, apiRequest } from '@/api/http'
 import type { GameListEntry, GameStatus, Page } from '@/api/types'
 import AuthFormError from '@/components/AuthFormError.vue'
+import PaginationControls from '@/components/PaginationControls.vue'
 import { gameStatusLabels, gameStatusOptions } from '@/domain/game-status'
 
 const entries = ref<GameListEntry[]>([])
+const listPage = ref<Page<GameListEntry> | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const selectedEntry = ref<GameListEntry | null>(null)
@@ -17,9 +19,15 @@ const saving = ref(false)
 const deleting = ref(false)
 const actionError = ref<string | null>(null)
 
-onMounted(async () => {
+onMounted(() => loadList(0))
+
+async function loadList(pageNumber: number): Promise<void> {
+  loading.value = true
+  errorMessage.value = null
+
   try {
-    const page = await apiRequest<Page<GameListEntry>>('/api/me/games')
+    const page = await apiRequest<Page<GameListEntry>>(`/api/me/games?page=${pageNumber}&size=20`)
+    listPage.value = page
     entries.value = page.content
   } catch (error) {
     errorMessage.value =
@@ -27,7 +35,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
 
 function openEdit(entry: GameListEntry): void {
   selectedEntry.value = entry
@@ -129,6 +137,13 @@ async function removeEntry(): Promise<void> {
         </div>
       </li>
     </ul>
+    <PaginationControls
+      v-if="listPage"
+      :page="listPage.page"
+      :total-pages="listPage.totalPages"
+      :disabled="loading"
+      @change="loadList"
+    />
 
     <div v-if="selectedEntry" class="dialog-backdrop" @click.self="closeEdit">
       <section class="list-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-title">
