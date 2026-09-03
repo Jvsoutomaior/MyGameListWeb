@@ -196,6 +196,140 @@ h1 {
   background: #fee7e2;
   border-radius: 0.4rem;
 }
+.success-message {
+  margin-top: 2rem;
+  padding: 0.8rem 1rem;
+  color: #235c3a;
+  background: #e1f4e8;
+  border-radius: 0.4rem;
+}
+
+.search-form {
+  display: flex;
+  max-width: 720px;
+  gap: 0.75rem;
+}
+.search-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+  padding: 2rem 0 0;
+  list-style: none;
+}
+.game-card {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  color: var(--line);
+  background: var(--ink);
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.08em;
+}
+.cover-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.game-card-content {
+  padding: 1.25rem;
+}
+.game-card-content p {
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.game-card-content h2 {
+  min-height: 3.5rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.15;
+}
+.game-card-content .secondary-button {
+  width: 100%;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 14 12 / 68%);
+}
+.list-dialog {
+  position: relative;
+  width: min(100%, 520px);
+  padding: 2rem;
+  background: var(--surface);
+  border-radius: 0.8rem;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 25%);
+}
+.list-dialog h2 {
+  padding-right: 2rem;
+  font-size: 2rem;
+}
+.list-dialog form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.list-dialog label {
+  margin-top: 0.35rem;
+  font-weight: 800;
+}
+.list-dialog label span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.list-dialog input,
+.list-dialog select,
+.list-dialog textarea {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  font: inherit;
+}
+.dialog-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font-size: 1.75rem;
+  cursor: pointer;
+}
 
 .page-heading {
   padding-bottom: 2rem;
@@ -252,6 +386,12 @@ h1 {
     border-bottom: 1px solid var(--line);
   }
   .auth-card {
+    padding: 1.5rem;
+  }
+  .search-form {
+    flex-direction: column;
+  }
+  .list-dialog {
     padding: 1.5rem;
   }
 }

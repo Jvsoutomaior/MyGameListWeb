@@ -32,7 +32,13 @@ async function loadCsrfToken(): Promise<CsrfTokenResponse> {
 
   if (!response.ok) throw await createApiError(response)
 
-  csrfToken = (await response.json()) as CsrfTokenResponse
+  const responseToken = (await response.json()) as CsrfTokenResponse
+  const cookieToken = readCookie('XSRF-TOKEN')
+  if (!cookieToken) {
+    throw new Error('The XSRF-TOKEN cookie was not provided by the API')
+  }
+
+  csrfToken = { ...responseToken, token: cookieToken }
   return csrfToken
 }
 
@@ -77,4 +83,10 @@ async function createApiError(response: Response): Promise<ApiError> {
     ? ((await response.json()) as ProblemDetail)
     : undefined
   return new ApiError(response.status, problem)
+}
+
+function readCookie(name: string): string | undefined {
+  const prefix = `${encodeURIComponent(name)}=`
+  const cookie = document.cookie.split('; ').find((item) => item.startsWith(prefix))
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : undefined
 }

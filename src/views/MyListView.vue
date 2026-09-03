@@ -3,18 +3,11 @@ import { onMounted, ref } from 'vue'
 
 import { ApiError, apiRequest } from '@/api/http'
 import type { GameListEntry, Page } from '@/api/types'
+import { gameStatusLabels } from '@/domain/game-status'
 
 const entries = ref<GameListEntry[]>([])
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
-
-const statusLabels: Record<GameListEntry['status'], string> = {
-  PLAN_TO_PLAY: 'Quero jogar',
-  PLAYING: 'Jogando',
-  COMPLETED: 'Concluído',
-  ON_HOLD: 'Em pausa',
-  DROPPED: 'Abandonado',
-}
 
 onMounted(async () => {
   try {
@@ -48,7 +41,7 @@ onMounted(async () => {
       <li v-for="entry in entries" :key="entry.id" class="game-row">
         <div>
           <h2>{{ entry.game.title }}</h2>
-          <p>{{ statusLabels[entry.status] }}</p>
+          <p>{{ gameStatusLabels[entry.status] }}</p>
         </div>
         <strong>{{ entry.score === null ? 'Sem nota' : `${entry.score}/10` }}</strong>
       </li>

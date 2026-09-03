@@ -5,13 +5,17 @@ import { apiRequest, clearCsrfToken } from '@/api/http'
 describe('apiRequest', () => {
   beforeEach(() => {
     clearCsrfToken()
+    document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/'
     vi.restoreAllMocks()
   })
 
   it('loads CSRF and sends credentials on state-changing requests', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-value; Path=/'
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(Response.json({ token: 'csrf-value', headerName: 'X-XSRF-TOKEN' }))
+      .mockResolvedValueOnce(
+        Response.json({ token: 'masked-response-value', headerName: 'X-XSRF-TOKEN' }),
+      )
       .mockResolvedValueOnce(Response.json({ id: 'user-id', username: 'player' }))
 
     await apiRequest('/api/auth/login', {

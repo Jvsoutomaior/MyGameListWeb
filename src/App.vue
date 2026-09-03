@@ -17,6 +17,7 @@ async function logout(): Promise<void> {
     <RouterLink class="brand" to="/">MyGameList</RouterLink>
     <nav aria-label="Navegação principal">
       <RouterLink to="/">Início</RouterLink>
+      <RouterLink to="/games">Jogos</RouterLink>
       <RouterLink v-if="auth.isAuthenticated" to="/my-list">Minha lista</RouterLink>
       <template v-if="auth.isAuthenticated">
         <span class="username">@{{ auth.user?.username }}</span>

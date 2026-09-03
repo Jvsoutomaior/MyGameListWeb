@@ -7,9 +7,12 @@ export type User = {
 
 export type Game = {
   id: string
+  source: string
+  externalId: string
   title: string
   coverUrl: string | null
   releaseDate: string | null
+  synchronizedAt: string
 }
 
 export type GameStatus = 'PLAN_TO_PLAY' | 'PLAYING' | 'COMPLETED' | 'ON_HOLD' | 'DROPPED'
