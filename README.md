@@ -2,6 +2,21 @@
 
 Front-end do MyGameList, construído com Vue, TypeScript, Vite e Pinia.
 
+## Stack completo com Docker
+
+Quando `MyGameListWeb` e `MyGameListApi` estiverem lado a lado dentro da pasta
+`MyGameList`, o Compose da pasta compartilhada inicia o front-end, a API e o PostgreSQL:
+
+```bash
+cd ..
+docker compose up --build -d
+```
+
+Depois, abra `http://localhost:5174`. Use `docker compose logs -f` para acompanhar os
+serviços e `docker compose down` para encerrá-los sem apagar os dados do banco. Após uma
+alteração no código, execute novamente `docker compose up --build -d` para reconstruir as
+imagens.
+
 ## Pré-requisitos
 
 - Node.js 22.18 ou 24.12+
