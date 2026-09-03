@@ -1,3 +1,16 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const username = ref('')
+
+async function visitProfile(): Promise<void> {
+  const normalizedUsername = username.value.trim()
+  if (normalizedUsername) await router.push(`/users/${encodeURIComponent(normalizedUsername)}`)
+}
+</script>
+
 <template>
   <main class="home-page">
     <section class="hero">
@@ -28,6 +41,21 @@
         <h2>Compartilhe</h2>
         <p>Visite perfis públicos e conheça o gosto de outros jogadores.</p>
       </article>
+    </section>
+
+    <section class="profile-lookup">
+      <div>
+        <p class="eyebrow">Listas públicas</p>
+        <h2>Conheça o perfil de outro jogador.</h2>
+        <p>Digite o nome de usuário exato para consultar sua lista pública.</p>
+      </div>
+      <form class="profile-lookup-form" @submit.prevent="visitProfile">
+        <label for="profile-username">Nome de usuário</label>
+        <div>
+          <input id="profile-username" v-model="username" placeholder="Ex.: playerone" required />
+          <button class="secondary-button" type="submit">Visitar perfil</button>
+        </div>
+      </form>
     </section>
   </main>
 </template>

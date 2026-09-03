@@ -142,6 +142,45 @@ h1 {
   color: var(--muted);
   line-height: 1.65;
 }
+.profile-lookup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-top: 5rem;
+  padding: 3rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.profile-lookup h2 {
+  max-width: 520px;
+  margin-bottom: 0.75rem;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
+}
+.profile-lookup p {
+  color: var(--muted);
+}
+.profile-lookup-form {
+  align-self: center;
+}
+.profile-lookup-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 800;
+}
+.profile-lookup-form > div {
+  display: flex;
+  gap: 0.75rem;
+}
+.profile-lookup-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
 
 .auth-page {
   display: grid;
@@ -418,6 +457,45 @@ h1 {
   opacity: 0.6;
   cursor: wait;
 }
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.profile-header h1 {
+  margin-bottom: 0.75rem;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+}
+.profile-avatar {
+  display: grid;
+  flex: 0 0 clamp(100px, 16vw, 170px);
+  place-items: center;
+  width: clamp(100px, 16vw, 170px);
+  aspect-ratio: 1;
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: 50%;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.08em;
+}
+.profile-since,
+.profile-bio {
+  max-width: 680px;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.public-list-heading {
+  display: flex;
+  justify-content: space-between;
+  padding: 3rem 0 1rem;
+}
+.public-list-heading h2 {
+  font-size: 2rem;
+}
 
 @media (max-width: 720px) {
   .site-header {
@@ -439,6 +517,16 @@ h1 {
   }
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+  .profile-lookup {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    padding: 1.5rem;
+  }
+  .profile-lookup-form > div {
+    align-items: stretch;
+    flex-direction: column;
   }
   .feature-grid article {
     padding: 1.5rem 0;
@@ -466,5 +554,10 @@ h1 {
   .dialog-actions {
     align-items: stretch;
     flex-direction: column-reverse;
+  }
+  .profile-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1.25rem;
   }
 }

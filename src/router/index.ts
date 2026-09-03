@@ -12,6 +12,11 @@ const router = createRouter({
       component: () => import('@/views/GameCatalogView.vue'),
     },
     {
+      path: '/users/:username',
+      name: 'public-profile',
+      component: () => import('@/views/PublicProfileView.vue'),
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),

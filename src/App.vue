@@ -20,7 +20,9 @@ async function logout(): Promise<void> {
       <RouterLink to="/games">Jogos</RouterLink>
       <RouterLink v-if="auth.isAuthenticated" to="/my-list">Minha lista</RouterLink>
       <template v-if="auth.isAuthenticated">
-        <span class="username">@{{ auth.user?.username }}</span>
+        <RouterLink class="username" :to="`/users/${auth.user?.username}`">
+          @{{ auth.user?.username }}
+        </RouterLink>
         <button class="text-button" type="button" @click="logout">Sair</button>
       </template>
       <template v-else>

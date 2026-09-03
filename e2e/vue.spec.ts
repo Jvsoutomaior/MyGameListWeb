@@ -176,3 +176,53 @@ test('edits and removes an entry from the authenticated user list', async ({ pag
   await page.getByRole('button', { name: 'Remover' }).click()
   await expect(page.getByRole('heading', { name: 'Sua lista ainda está vazia' })).toBeVisible()
 })
+
+test('finds and displays another user public profile', async ({ page }) => {
+  await page.route('http://localhost:8080/api/auth/me', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/problem+json', body: '{}' }),
+  )
+  await page.route('http://localhost:8080/api/users/playerone', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'user-id',
+        username: 'playerone',
+        bio: 'Jogando um pouco de tudo.',
+        createdAt: '2025-01-15T12:00:00Z',
+      }),
+    }),
+  )
+  await page.route('http://localhost:8080/api/users/playerone/games', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        content: [
+          {
+            id: 'entry-id',
+            game,
+            status: 'COMPLETED',
+            score: 10,
+            comment: 'Um dos meus favoritos.',
+            createdAt: '2025-01-15T12:00:00Z',
+            updatedAt: '2025-01-15T12:00:00Z',
+          },
+        ],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+      }),
+    }),
+  )
+
+  await page.goto('/')
+  await page.getByLabel('Nome de usuário').fill('playerone')
+  await page.getByRole('button', { name: 'Visitar perfil' }).click()
+
+  await expect(page).toHaveURL('/users/playerone')
+  await expect(page.getByRole('heading', { name: '@playerone' })).toBeVisible()
+  await expect(page.getByText('Jogando um pouco de tudo.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: game.title })).toBeVisible()
+  await expect(page.getByText('Concluído')).toBeVisible()
+  await expect(page.getByText('10/10')).toBeVisible()
+  await expect(page.getByText('Um dos meus favoritos.')).toBeVisible()
+})
