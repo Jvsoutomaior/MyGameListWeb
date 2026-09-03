@@ -1,6 +1,18 @@
 # MyGameListWeb
 
-This template should help get you started developing with Vue 3 in Vite.
+Front-end Vue do MyGameList.
+
+## Integração com a API
+
+Por padrão, o front-end usa `http://localhost:8080`. Para usar outro endereço, defina:
+
+```text
+VITE_API_BASE_URL=https://api.example.com
+```
+
+O cliente HTTP envia cookies com `credentials: "include"` e obtém automaticamente um
+token CSRF antes de requisições que alteram dados. A sessão fica no cookie `HttpOnly` do
+back-end; ela não é salva em `localStorage`.
 
 ## Recommended IDE Setup
 
