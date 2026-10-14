@@ -64,3 +64,11 @@ instale os navegadores com `npx playwright install`.
 
 O catálogo local é temporário. A integração com um provedor externo de jogos será adicionada
 em uma etapa futura.
+
+## Licença
+
+Copyright 2026 João Vítor Motta Souto Maior.
+
+Este projeto é licenciado sob a [Apache License 2.0](LICENSE).
+Consulte também os avisos de autoria em [NOTICE](NOTICE).
+A licença do código não concede direitos sobre capas, marcas ou dados de terceiros.
