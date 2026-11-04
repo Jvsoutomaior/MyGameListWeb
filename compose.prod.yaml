@@ -1,0 +1,9 @@
+services:
+  web:
+    image: mygamelist-web:prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${PROD_WEB_PORT:-8081}:80"
+    restart: unless-stopped
