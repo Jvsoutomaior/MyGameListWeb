@@ -11,6 +11,7 @@ const router = useRouter()
 const username = ref('')
 const email = ref('')
 const password = ref('')
+const invitationCode = ref('')
 const errorMessage = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -19,11 +20,22 @@ async function submit(): Promise<void> {
   submitting.value = true
 
   try {
-    await auth.register({ username: username.value, email: email.value, password: password.value })
+    await auth.register({
+      username: username.value,
+      email: email.value,
+      password: password.value,
+      invitationCode: invitationCode.value,
+    })
     await router.push('/my-list')
   } catch (error) {
-    errorMessage.value =
-      error instanceof ApiError ? error.message : 'Não foi possível criar a conta.'
+    if (error instanceof ApiError && error.message === 'Invalid invitation code') {
+      errorMessage.value = 'Código de convite inválido. Confira o código recebido e tente novamente.'
+    } else if (error instanceof ApiError && error.status === 503) {
+      errorMessage.value = 'O cadastro está indisponível no momento. Tente novamente mais tarde.'
+    } else {
+      errorMessage.value =
+        error instanceof ApiError ? error.message : 'Não foi possível criar a conta.'
+    }
   } finally {
     submitting.value = false
   }
@@ -36,7 +48,8 @@ async function submit(): Promise<void> {
       <p class="eyebrow">Comece sua lista</p>
       <h1>Crie sua conta</h1>
       <p class="supporting-text">
-        Registre o que jogou e compartilhe sua lista com outras pessoas.
+        Registre o que jogou e compartilhe sua lista com outras pessoas. Para criar uma conta, você
+        precisa de um código de convite.
       </p>
 
       <form @submit.prevent="submit">
@@ -53,6 +66,19 @@ async function submit(): Promise<void> {
           type="password"
           autocomplete="new-password"
           minlength="8"
+          required
+        />
+
+        <label for="invitation-code">Código de convite</label>
+        <input
+          id="invitation-code"
+          v-model="invitationCode"
+          autocomplete="off"
+          autocapitalize="none"
+          :spellcheck="false"
+          maxlength="128"
+          pattern=".*\S.*"
+          title="Informe o código de convite recebido."
           required
         />
 

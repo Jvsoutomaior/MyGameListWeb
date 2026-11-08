@@ -1,5 +1,12 @@
 # MyGameList Web
 
+## Cadastro por convite
+
+O formulário de cadastro exige um código de convite e o envia como `invitationCode`
+no `POST /api/users`. A API valida o código; o frontend não contém o código válido.
+Convites inválidos e cadastro indisponível apresentam mensagens no formulário.
+Arquivos `.env` locais não devem ser versionados.
+
 Front-end do MyGameList, construído com Vue, TypeScript, Vite e Pinia.
 
 ## Stack completo com Docker

@@ -10,6 +10,40 @@ const game = {
   synchronizedAt: '2026-09-02T12:00:00Z',
 }
 
+test('sends the invitation code and explains a rejected invitation', async ({ page }) => {
+  await page.context().addCookies([
+    { name: 'XSRF-TOKEN', value: 'csrf-value', domain: 'localhost', path: '/' },
+  ])
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/problem+json', body: '{}' }),
+  )
+  await page.route('**/api/auth/csrf', (route) =>
+    route.fulfill({ contentType: 'application/json', body: '{}' }),
+  )
+  await page.route('**/api/users', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      username: 'player',
+      email: 'player@example.com',
+      password: 'password123',
+      invitationCode: 'Wrong-Code',
+    })
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/problem+json',
+      body: JSON.stringify({ detail: 'Invalid invitation code' }),
+    })
+  })
+
+  await page.goto('/register')
+  await page.getByLabel('Nome de usuário').fill('player')
+  await page.getByLabel('E-mail', { exact: true }).fill('player@example.com')
+  await page.getByLabel('Senha', { exact: true }).fill('password123')
+  await page.getByLabel('Código de convite').fill('Wrong-Code')
+  await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Código de convite inválido')
+  await expect(page).toHaveURL('/register')
+})
+
 test('shows the home page and navigates to login', async ({ page }) => {
   await page.route('http://localhost:8080/api/auth/me', async (route) => {
     await route.fulfill({

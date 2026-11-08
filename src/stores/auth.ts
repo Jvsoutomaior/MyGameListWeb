@@ -5,7 +5,7 @@ import { ApiError, apiRequest, clearCsrfToken, refreshCsrfToken } from '@/api/ht
 import type { User } from '@/api/types'
 
 type LoginCredentials = { email: string; password: string }
-type Registration = LoginCredentials & { username: string }
+type Registration = LoginCredentials & { username: string; invitationCode: string }
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
