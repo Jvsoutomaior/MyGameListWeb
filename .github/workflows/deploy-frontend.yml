@@ -1,0 +1,61 @@
+name: Deploy Frontend
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Frontend CI run ID from main
+        required: true
+        type: string
+
+permissions:
+  actions: read
+
+concurrency:
+  group: frontend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Validate and download the build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID" |
+            jq -e --arg repo "$GITHUB_REPOSITORY" '
+              .conclusion == "success" and .event == "push" and
+              .head_branch == "main" and .head_repository.full_name == $repo and
+              .path == ".github/workflows/frontend-ci.yml"
+            ' >/dev/null
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name mygamelist-web-dist --dir dist
+          test -s dist/index.html
+          tar -C dist -czf frontend.tar.gz .
+
+      - name: Publish and verify on Lightsail
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_KEY }}
+          DEPLOY_HOST_KEY: ${{ vars.FRONTEND_DEPLOY_HOST_KEY }}
+          DEPLOY_HOST: ${{ vars.FRONTEND_DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          : "${DEPLOY_KEY:?}" "${DEPLOY_HOST_KEY:?}" "${DEPLOY_HOST:?}"
+          umask 077
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf "$ssh_dir"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$DEPLOY_HOST_KEY" > "$ssh_dir/known_hosts"
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" -o ConnectTimeout=10 \
+            -i "$ssh_dir/key" "mygamelist-web-deploy@$DEPLOY_HOST" \
+            "deploy $BUILD_RUN_ID" < frontend.tar.gz
