@@ -32,5 +32,16 @@ async function logout(): Promise<void> {
     </nav>
   </header>
 
+  <p v-if="auth.sessionStatus === 'unavailable'" class="session-notice" role="status">
+    Não foi possível verificar sua sessão. Tente novamente em instantes.
+  </p>
+
   <RouterView />
 </template>
+
+<style scoped>
+.session-notice {
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+</style>

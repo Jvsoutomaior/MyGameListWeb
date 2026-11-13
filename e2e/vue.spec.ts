@@ -10,6 +10,30 @@ const game = {
   synchronizedAt: '2026-09-02T12:00:00Z',
 }
 
+test('opens public routes and retries session checks after an HTML response', async ({ page }) => {
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>MyGameList</title>' }),
+  )
+
+  await page.goto('/login')
+  await expect(page.getByRole('heading', { name: 'Entre na sua conta' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Não foi possível verificar sua sessão')
+
+  await page.goto('/my-list')
+  await expect(page).toHaveURL('/login?redirect=/my-list')
+  await expect(page.getByRole('heading', { name: 'Entre na sua conta' })).toBeVisible()
+
+  await page.unroute('**/api/auth/me')
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/problem+json', body: '{}' }),
+  )
+  const sessionResponse = page.waitForResponse('**/api/auth/me')
+  await page.getByRole('link', { name: 'Cadastre-se' }).click()
+  await sessionResponse
+  await expect(page.getByRole('heading', { name: 'Crie sua conta' })).toBeVisible()
+  await expect(page.getByRole('status')).toHaveCount(0)
+})
+
 test('sends the invitation code and explains a rejected invitation', async ({ page }) => {
   await page.context().addCookies([
     { name: 'XSRF-TOKEN', value: 'csrf-value', domain: 'localhost', path: '/' },

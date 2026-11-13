@@ -6,22 +6,33 @@ import type { User } from '@/api/types'
 
 type LoginCredentials = { email: string; password: string }
 type Registration = LoginCredentials & { username: string; invitationCode: string }
+type SessionStatus = 'pending' | 'verified' | 'unavailable'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const initialized = ref(false)
+  const sessionStatus = ref<SessionStatus>('pending')
   const isAuthenticated = computed(() => user.value !== null)
 
   async function initialize(): Promise<void> {
-    if (initialized.value) return
+    if (sessionStatus.value === 'verified') return
 
     try {
-      user.value = await apiRequest<User>('/api/auth/me')
+      const sessionUser = await apiRequest<User>('/api/auth/me')
+      if (
+        !sessionUser ||
+        typeof sessionUser.id !== 'string' ||
+        typeof sessionUser.username !== 'string'
+      ) {
+        sessionStatus.value = 'unavailable'
+        return
+      }
+
+      user.value = sessionUser
+      sessionStatus.value = 'verified'
     } catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) throw error
       user.value = null
-    } finally {
-      initialized.value = true
+      sessionStatus.value =
+        error instanceof ApiError && error.status === 401 ? 'verified' : 'unavailable'
     }
   }
 
@@ -31,7 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
       body: JSON.stringify(credentials),
     })
     await refreshCsrfToken()
-    initialized.value = true
+    sessionStatus.value = 'verified'
   }
 
   async function register(registration: Registration): Promise<void> {
@@ -46,8 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
     await apiRequest<void>('/api/auth/logout', { method: 'POST' })
     user.value = null
     clearCsrfToken()
-    initialized.value = true
+    sessionStatus.value = 'verified'
   }
 
-  return { user, initialized, isAuthenticated, initialize, login, register, logout }
+  return { user, sessionStatus, isAuthenticated, initialize, login, register, logout }
 })
