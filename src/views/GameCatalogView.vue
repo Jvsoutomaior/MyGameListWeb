@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, apiRequest } from '@/api/http'
@@ -12,10 +12,10 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const query = ref('')
-const games = ref<Game[]>([])
-const recentGames = ref<Game[]>([])
+const recentPage = ref<Page<Game> | null>(null)
 const loadingRecent = ref(true)
-const recentError = ref(false)
+const failedRecentPage = ref<number | null>(null)
+const catalogHeading = ref<HTMLHeadingElement | null>(null)
 const brokenCovers = ref(new Set<string>())
 const resultPage = ref<Page<Game> | null>(null)
 const activeQuery = ref('')
@@ -29,22 +29,38 @@ const comment = ref('')
 const adding = ref(false)
 const addError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
-const visibleGames = computed(() => (searched.value ? games.value : recentGames.value))
+const visiblePage = computed(() => (searched.value ? resultPage.value : recentPage.value))
+const visibleGames = computed(() => visiblePage.value?.content ?? [])
 
-async function loadRecentGames(): Promise<void> {
+async function loadRecentGames(pageNumber: number): Promise<void> {
+  const changingPage = recentPage.value !== null
   loadingRecent.value = true
-  recentError.value = false
+  failedRecentPage.value = null
 
   try {
-    recentGames.value = await apiRequest<Game[]>('/api/games/recent')
+    const params = new URLSearchParams({ page: String(pageNumber) })
+    recentPage.value = await apiRequest<Page<Game>>(`/api/games/recent/pages?${params}`)
+    await nextTick()
+    if (changingPage && !searched.value) {
+      catalogHeading.value?.focus({ preventScroll: true })
+      catalogHeading.value?.scrollIntoView({ block: 'start' })
+    }
   } catch {
-    recentError.value = true
+    failedRecentPage.value = pageNumber
   } finally {
     loadingRecent.value = false
   }
 }
 
-onMounted(loadRecentGames)
+onMounted(() => loadRecentGames(0))
+
+function changePage(pageNumber: number): void {
+  if (searched.value) {
+    void loadGames(pageNumber)
+  } else {
+    void loadRecentGames(pageNumber)
+  }
+}
 
 function clearSearch(): void {
   query.value = ''
@@ -74,12 +90,9 @@ async function loadGames(pageNumber: number): Promise<void> {
       page: String(pageNumber),
       size: '20',
     })
-    const page = await apiRequest<Page<Game>>(`/api/games?${params}`)
-    resultPage.value = page
-    games.value = page.content
+    resultPage.value = await apiRequest<Page<Game>>(`/api/games?${params}`)
   } catch (error) {
     resultPage.value = null
-    games.value = []
     searchError.value =
       error instanceof ApiError ? error.message : 'Não foi possível pesquisar o catálogo.'
   } finally {
@@ -160,7 +173,7 @@ async function addToList(): Promise<void> {
     <p v-if="successMessage" class="success-message" role="status">{{ successMessage }}</p>
 
     <section
-      v-if="searched && !searching && games.length === 0 && !searchError"
+      v-if="searched && !searching && visibleGames.length === 0 && !searchError"
       class="empty-state"
     >
       <h2>Nenhum jogo encontrado</h2>
@@ -169,7 +182,7 @@ async function addToList(): Promise<void> {
 
     <section class="catalog-results" aria-labelledby="catalog-results-title">
       <div class="catalog-results-heading">
-        <h2 id="catalog-results-title">
+        <h2 id="catalog-results-title" ref="catalogHeading" tabindex="-1">
           {{ searched ? 'Resultados da pesquisa' : 'Jogos recentes' }}
         </h2>
         <button
@@ -183,14 +196,14 @@ async function addToList(): Promise<void> {
         </button>
       </div>
       <template v-if="!searched">
-        <p v-if="loadingRecent">Carregando jogos…</p>
-        <div v-else-if="recentError">
-          <p>Não foi possível carregar os jogos recentes.</p>
-          <button class="secondary-button" type="button" @click="loadRecentGames">
+        <p v-if="loadingRecent" role="status">Carregando jogos…</p>
+        <div v-else-if="failedRecentPage !== null">
+          <p role="alert">Não foi possível carregar esta página de jogos recentes.</p>
+          <button class="secondary-button" type="button" @click="loadRecentGames(failedRecentPage)">
             Tentar novamente
           </button>
         </div>
-        <p v-else-if="!recentGames.length">Nenhum jogo recente disponível.</p>
+        <p v-else-if="!visibleGames.length">Nenhum jogo recente disponível.</p>
       </template>
 
       <ul v-if="visibleGames.length" class="catalog-grid">
@@ -217,11 +230,11 @@ async function addToList(): Promise<void> {
       </ul>
 
       <PaginationControls
-        v-if="resultPage"
-        :page="resultPage.page"
-        :total-pages="resultPage.totalPages"
-        :disabled="searching"
-        @change="loadGames"
+        v-if="visiblePage"
+        :page="visiblePage.page"
+        :total-pages="visiblePage.totalPages"
+        :disabled="searched ? searching : loadingRecent"
+        @change="changePage"
       />
     </section>
 

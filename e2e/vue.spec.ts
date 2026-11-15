@@ -20,14 +20,17 @@ test('shows game covers below search on the first visit', async ({ page }) => {
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="14"><rect width="10" height="14"/></svg>',
     }),
   )
-  await page.route('**/api/games/recent', (route) =>
-    route.fulfill({
-      json: [
-        { ...game, coverUrl: '/cover.svg' },
-        { ...game, id: 'second-game', title: 'Celeste', coverUrl: '/cover.svg' },
-      ],
-    }),
-  )
+  await page.route('**/api/games/recent/pages?*', (route) => {
+    const currentPage = Number(new URL(route.request().url()).searchParams.get('page'))
+    const content =
+      currentPage === 0
+        ? [
+            { ...game, coverUrl: '/cover.svg' },
+            { ...game, id: 'second-game', title: 'Celeste', coverUrl: '/cover.svg' },
+          ]
+        : [{ ...game, id: 'third-game', title: 'Hades', coverUrl: '/cover.svg' }]
+    return route.fulfill({ json: { content, page: currentPage, totalPages: 2 } })
+  })
 
   await page.goto('/games')
   const recent = page.getByRole('region', { name: 'Jogos recentes' })
@@ -44,6 +47,19 @@ test('shows game covers below search on the first visit', async ({ page }) => {
     }))
     expect(gridLayout).toEqual({ columns: 2, scrollWidth: width })
   }
+
+  const pagination = recent.getByRole('navigation', { name: 'Paginação' })
+  const previous = pagination.getByRole('button', { name: 'Anterior' })
+  const next = pagination.getByRole('button', { name: 'Próxima' })
+  await expect(previous).toBeDisabled()
+  await next.click()
+  await expect(recent.getByRole('heading', { name: 'Hades' })).toBeVisible()
+  await expect(recent.getByRole('heading', { name: game.title })).toHaveCount(0)
+  await expect(pagination).toContainText('Página 2 de 2')
+  await expect(next).toBeDisabled()
+  await previous.click()
+  await expect(recent.getByRole('heading', { name: game.title })).toBeVisible()
+  await expect(pagination).toContainText('Página 1 de 2')
 
   await recent.getByRole('button', { name: 'Adicionar à lista' }).first().click()
   await expect(page).toHaveURL('/login?redirect=/games')
