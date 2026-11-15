@@ -10,6 +10,30 @@ const game = {
   synchronizedAt: '2026-09-02T12:00:00Z',
 }
 
+test('shows game covers below search on the first visit', async ({ page }) => {
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/problem+json', body: '{}' }),
+  )
+  await page.route('**/cover.svg', (route) =>
+    route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="14"><rect width="10" height="14"/></svg>',
+    }),
+  )
+  await page.route('**/api/games/recent', (route) =>
+    route.fulfill({ json: [{ ...game, coverUrl: '/cover.svg' }] }),
+  )
+
+  await page.goto('/games')
+  const recent = page.getByRole('region', { name: 'Jogos recentes' })
+  await expect(recent.getByRole('heading', { name: game.title })).toBeVisible()
+  await expect
+    .poll(() => recent.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBe(10)
+  await recent.getByRole('button', { name: 'Adicionar à lista' }).click()
+  await expect(page).toHaveURL('/login?redirect=/games')
+})
+
 test('opens public routes and retries session checks after an HTML response', async ({ page }) => {
   await page.route('**/api/auth/me', (route) =>
     route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>MyGameList</title>' }),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, apiRequest } from '@/api/http'
@@ -13,6 +13,10 @@ const auth = useAuthStore()
 const router = useRouter()
 const query = ref('')
 const games = ref<Game[]>([])
+const recentGames = ref<Game[]>([])
+const loadingRecent = ref(true)
+const recentError = ref(false)
+const brokenCovers = ref(new Set<string>())
 const resultPage = ref<Page<Game> | null>(null)
 const activeQuery = ref('')
 const searched = ref(false)
@@ -25,6 +29,30 @@ const comment = ref('')
 const adding = ref(false)
 const addError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const visibleGames = computed(() => (searched.value ? games.value : recentGames.value))
+
+async function loadRecentGames(): Promise<void> {
+  loadingRecent.value = true
+  recentError.value = false
+
+  try {
+    recentGames.value = await apiRequest<Game[]>('/api/games/recent')
+  } catch {
+    recentError.value = true
+  } finally {
+    loadingRecent.value = false
+  }
+}
+
+onMounted(loadRecentGames)
+
+function clearSearch(): void {
+  query.value = ''
+  activeQuery.value = ''
+  searched.value = false
+  resultPage.value = null
+  searchError.value = null
+}
 
 async function submitSearch(): Promise<void> {
   const normalizedQuery = query.value.trim()
@@ -123,6 +151,9 @@ async function addToList(): Promise<void> {
           {{ searching ? 'Pesquisando…' : 'Pesquisar' }}
         </button>
       </form>
+      <p class="catalog-attribution">
+        Dados e capas dos jogos fornecidos por <a href="https://www.igdb.com/">IGDB.com</a>.
+      </p>
     </header>
 
     <p v-if="searchError" class="form-error" role="alert">{{ searchError }}</p>
@@ -133,32 +164,66 @@ async function addToList(): Promise<void> {
       class="empty-state"
     >
       <h2>Nenhum jogo encontrado</h2>
-      <p>O catálogo ainda é pequeno e será conectado a uma fonte externa futuramente.</p>
+      <p>Tente buscar por outro título ou por um trecho do nome.</p>
     </section>
 
-    <ul v-if="games.length" class="catalog-grid">
-      <li v-for="game in games" :key="game.id" class="game-card">
-        <div class="cover-placeholder" :class="{ 'has-cover': game.coverUrl }">
-          <img v-if="game.coverUrl" :src="game.coverUrl" :alt="`Capa de ${game.title}`" />
-          <span v-else aria-hidden="true">MGL</span>
-        </div>
-        <div class="game-card-content">
-          <p>{{ game.releaseDate?.slice(0, 4) ?? 'Ano desconhecido' }}</p>
-          <h2>{{ game.title }}</h2>
-          <button class="secondary-button" type="button" @click="chooseGame(game)">
-            Adicionar à lista
+    <section class="catalog-results" aria-labelledby="catalog-results-title">
+      <div class="catalog-results-heading">
+        <h2 id="catalog-results-title">
+          {{ searched ? 'Resultados da pesquisa' : 'Jogos recentes' }}
+        </h2>
+        <button
+          v-if="searched"
+          class="secondary-button"
+          type="button"
+          :disabled="searching"
+          @click="clearSearch"
+        >
+          Ver jogos recentes
+        </button>
+      </div>
+      <template v-if="!searched">
+        <p v-if="loadingRecent">Carregando jogos…</p>
+        <div v-else-if="recentError">
+          <p>Não foi possível carregar os jogos recentes.</p>
+          <button class="secondary-button" type="button" @click="loadRecentGames">
+            Tentar novamente
           </button>
         </div>
-      </li>
-    </ul>
+        <p v-else-if="!recentGames.length">Nenhum jogo recente disponível.</p>
+      </template>
 
-    <PaginationControls
-      v-if="resultPage"
-      :page="resultPage.page"
-      :total-pages="resultPage.totalPages"
-      :disabled="searching"
-      @change="loadGames"
-    />
+      <ul v-if="visibleGames.length" class="catalog-grid">
+        <li v-for="game in visibleGames" :key="game.id" class="game-card">
+          <div class="cover-placeholder">
+            <img
+              v-if="game.coverUrl && !brokenCovers.has(game.id)"
+              :src="game.coverUrl"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              @error="brokenCovers.add(game.id)"
+            />
+            <span v-else aria-hidden="true">MGL</span>
+          </div>
+          <div class="game-card-content">
+            <h3>{{ game.title }}</h3>
+            <p v-if="game.releaseDate">{{ game.releaseDate.slice(0, 4) }}</p>
+            <button class="secondary-button" type="button" @click="chooseGame(game)">
+              Adicionar à lista
+            </button>
+          </div>
+        </li>
+      </ul>
+
+      <PaginationControls
+        v-if="resultPage"
+        :page="resultPage.page"
+        :total-pages="resultPage.totalPages"
+        :disabled="searching"
+        @change="loadGames"
+      />
+    </section>
 
     <div v-if="selectedGame" class="dialog-backdrop" @click.self="closeForm">
       <section class="list-dialog" role="dialog" aria-modal="true" aria-labelledby="add-title">
