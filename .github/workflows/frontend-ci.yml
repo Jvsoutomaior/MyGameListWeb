@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,6 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.artifact.outputs.artifact-id }}
 
     steps:
       - name: Check out source
@@ -38,8 +41,53 @@ jobs:
         run: npm run build
 
       - name: Upload build artifact
+        id: artifact
         uses: actions/upload-artifact@v7
         with:
           name: mygamelist-web-dist
           path: dist/
           if-no-files-found: error
+          overwrite: true
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: frontend-production
+      queue: max
+    steps:
+      - name: Download the build artifact
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: dist
+
+      - name: Publish and verify on Lightsail
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_KEY: ${{ secrets.FRONTEND_DEPLOY_KEY }}
+          DEPLOY_HOST_KEY: ${{ vars.FRONTEND_DEPLOY_HOST_KEY }}
+          DEPLOY_HOST: ${{ vars.FRONTEND_DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$main_sha" != "$GITHUB_SHA" ]]; then
+            echo "Skipping deployment because a newer commit is on main."
+            exit 0
+          fi
+
+          test -s dist/index.html
+          tar -C dist -czf frontend.tar.gz .
+          : "${DEPLOY_KEY:?}" "${DEPLOY_HOST_KEY:?}" "${DEPLOY_HOST:?}"
+          umask 077
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf "$ssh_dir"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$DEPLOY_HOST_KEY" > "$ssh_dir/known_hosts"
+          ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" -o ConnectTimeout=10 \
+            -i "$ssh_dir/key" "mygamelist-web-deploy@$DEPLOY_HOST" \
+            "deploy $GITHUB_RUN_ID" < frontend.tar.gz
