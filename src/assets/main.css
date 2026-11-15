@@ -1,15 +1,21 @@
 @import './base.css';
 
+:root {
+  --page-gutter: clamp(1rem, 3vw, 2rem);
+}
+
 #app {
   min-height: 100vh;
 }
 .site-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem 1.25rem;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 1.4rem 2rem;
+  padding: 1.4rem var(--page-gutter);
 }
 .brand {
   font-size: 1.15rem;
@@ -19,11 +25,16 @@
 }
 .site-header nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.25rem;
+  min-width: 0;
+  gap: 0.25rem 1.25rem;
 }
 .site-header nav a,
-.text-button {
+.site-header .text-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--muted);
   font-weight: 700;
   text-decoration: none;
@@ -36,8 +47,11 @@
   background: none;
   cursor: pointer;
 }
-.username {
-  color: var(--muted);
+.site-header .username {
+  display: block;
+  max-width: 100%;
+  align-content: center;
+  overflow-wrap: anywhere;
 }
 .site-header nav .nav-cta {
   padding: 0.65rem 1rem;
@@ -50,7 +64,7 @@
 .content-page {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 5rem 2rem;
+  padding: clamp(2rem, 7vw, 5rem) var(--page-gutter);
 }
 .hero {
   max-width: 850px;
@@ -74,6 +88,7 @@ h1 {
   font-size: clamp(2.6rem, 8vw, 6.5rem);
   line-height: 0.95;
   letter-spacing: -0.065em;
+  overflow-wrap: anywhere;
 }
 .hero-copy {
   max-width: 650px;
@@ -289,8 +304,8 @@ h1 {
 }
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(8.25rem, 23vw, 9rem)), 1fr));
+  gap: clamp(0.75rem, 2vw, 1rem);
   padding: 0;
   list-style: none;
 }
@@ -337,6 +352,8 @@ h1 {
 }
 .game-card-content .secondary-button {
   width: 100%;
+  min-height: 44px;
+  align-items: center;
   margin-top: auto;
   padding-inline: 0.5rem;
 }
@@ -346,6 +363,7 @@ h1 {
   z-index: 10;
   inset: 0;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   padding: 1rem;
   background: rgb(15 14 12 / 68%);
@@ -353,7 +371,9 @@ h1 {
 .list-dialog {
   position: relative;
   width: min(100%, 520px);
-  padding: 2rem;
+  max-height: 100%;
+  overflow: auto;
+  padding: clamp(1rem, 4vw, 2rem);
   background: var(--surface);
   border-radius: 0.8rem;
   box-shadow: 0 24px 80px rgb(0 0 0 / 25%);
@@ -361,6 +381,7 @@ h1 {
 .list-dialog h2 {
   padding-right: 2rem;
   font-size: 2rem;
+  overflow-wrap: anywhere;
 }
 .list-dialog form {
   display: grid;
@@ -405,7 +426,7 @@ h1 {
 }
 .empty-state {
   margin-top: 2rem;
-  padding: 3rem;
+  padding: clamp(1rem, 5vw, 3rem);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 0.75rem;
@@ -435,6 +456,7 @@ h1 {
 }
 .game-row-main {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .game-row-actions {
   flex-shrink: 0;
@@ -497,6 +519,11 @@ h1 {
   margin-bottom: 0.75rem;
   font-size: clamp(2.5rem, 7vw, 5rem);
 }
+.profile-header > div:last-child {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .profile-avatar {
   display: grid;
   flex: 0 0 clamp(100px, 16vw, 170px);
@@ -527,6 +554,7 @@ h1 {
 }
 .pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 1rem;
@@ -545,18 +573,11 @@ h1 {
 
 @media (max-width: 720px) {
   .site-header {
-    padding: 1.2rem;
+    padding-block: 0.75rem;
   }
   .site-header nav {
-    gap: 0.75rem;
-  }
-  .username,
-  .site-header nav > a:first-child {
-    display: none;
-  }
-  .home-page,
-  .content-page {
-    padding: 3rem 1.25rem;
+    flex-basis: 100%;
+    gap: 0.125rem 0.75rem;
   }
   .hero {
     padding: 2rem 0 4rem;
@@ -582,12 +603,6 @@ h1 {
   .auth-card {
     padding: 1.5rem;
   }
-  .search-form {
-    flex-direction: column;
-  }
-  .list-dialog {
-    padding: 1.5rem;
-  }
   .game-row {
     align-items: flex-start;
     flex-direction: column;
@@ -595,7 +610,6 @@ h1 {
   .game-row-actions {
     width: 100%;
     justify-content: space-between;
-    padding-left: 80px;
   }
   .dialog-actions {
     align-items: stretch;
@@ -606,11 +620,19 @@ h1 {
     flex-direction: column;
     gap: 1.25rem;
   }
+  .profile-avatar {
+    flex-basis: auto;
+  }
   .pagination {
-    justify-content: space-between;
     gap: 0.5rem;
   }
   .pagination .secondary-button {
     padding-inline: 0.75rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .search-form {
+    flex-direction: column;
   }
 }

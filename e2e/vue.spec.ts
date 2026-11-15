@@ -21,16 +21,31 @@ test('shows game covers below search on the first visit', async ({ page }) => {
     }),
   )
   await page.route('**/api/games/recent', (route) =>
-    route.fulfill({ json: [{ ...game, coverUrl: '/cover.svg' }] }),
+    route.fulfill({
+      json: [
+        { ...game, coverUrl: '/cover.svg' },
+        { ...game, id: 'second-game', title: 'Celeste', coverUrl: '/cover.svg' },
+      ],
+    }),
   )
 
   await page.goto('/games')
   const recent = page.getByRole('region', { name: 'Jogos recentes' })
   await expect(recent.getByRole('heading', { name: game.title })).toBeVisible()
-  await expect
-    .poll(() => recent.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth))
-    .toBe(10)
-  await recent.getByRole('button', { name: 'Adicionar à lista' }).click()
+  const covers = recent.locator('img')
+  await expect.poll(() => covers.first().evaluate((img) => img.naturalWidth)).toBe(10)
+
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(page.getByRole('link', { name: 'Criar conta' })).toBeInViewport()
+    const gridLayout = await recent.getByRole('listitem').evaluateAll((cards) => ({
+      columns: new Set(cards.map((card) => card.getBoundingClientRect().left)).size,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(gridLayout).toEqual({ columns: 2, scrollWidth: width })
+  }
+
+  await recent.getByRole('button', { name: 'Adicionar à lista' }).first().click()
   await expect(page).toHaveURL('/login?redirect=/games')
 })
 
@@ -194,6 +209,7 @@ test('adds a catalog game to the authenticated user list', async ({ page }) => {
 })
 
 test('edits and removes an entry from the authenticated user list', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 400 })
   const entry = {
     id: 'entry-id',
     game,
@@ -257,8 +273,14 @@ test('edits and removes an entry from the authenticated user list', async ({ pag
   })
 
   await page.goto('/my-list')
+  await expect(page.getByRole('link', { name: '@player' })).toBeInViewport()
   await expect(page.getByRole('heading', { name: game.title })).toBeVisible()
   await page.getByRole('button', { name: 'Editar' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('button', { name: 'Fechar' })).toBeInViewport()
+  expect(await dialog.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
+    await dialog.evaluate((element) => element.clientHeight),
+  )
   await page.getByLabel('Status').selectOption('COMPLETED')
   await page.getByLabel('Nota (opcional)').fill('10')
   await page.getByLabel('Comentário (opcional)').fill('Finalizado')
