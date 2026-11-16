@@ -4,7 +4,9 @@ import { onMounted, ref } from 'vue'
 import { ApiError, apiRequest } from '@/api/http'
 import type { GameListEntry, GameStatus, Page } from '@/api/types'
 import AuthFormError from '@/components/AuthFormError.vue'
+import FieldError from '@/components/FieldError.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
+import { useFormValidation } from '@/composables/useFormValidation'
 import { gameStatusLabels, gameStatusOptions } from '@/domain/game-status'
 
 const entries = ref<GameListEntry[]>([])
@@ -13,11 +15,21 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const selectedEntry = ref<GameListEntry | null>(null)
 const editStatus = ref<GameStatus>('PLAN_TO_PLAY')
-const editScore = ref<number | null>(null)
+const editScore = ref<number | '' | null>(null)
 const editComment = ref('')
 const saving = ref(false)
 const deleting = ref(false)
 const actionError = ref<string | null>(null)
+const scoreMessage = 'Use um número inteiro de 1 a 10 ou deixe a nota em branco.'
+const { errors, fieldAttrs, validate, clear } = useFormValidation({
+  'edit-score': {
+    rangeUnderflow: scoreMessage,
+    rangeOverflow: scoreMessage,
+    stepMismatch: scoreMessage,
+    badInput: scoreMessage,
+  },
+  'edit-comment': { tooLong: 'Reduza o comentário para até 5.000 caracteres.' },
+})
 
 onMounted(() => loadList(0))
 
@@ -38,6 +50,7 @@ async function loadList(pageNumber: number): Promise<void> {
 }
 
 function openEdit(entry: GameListEntry): void {
+  clear()
   selectedEntry.value = entry
   editStatus.value = entry.status
   editScore.value = entry.score
@@ -50,8 +63,9 @@ function closeEdit(): void {
   actionError.value = null
 }
 
-async function saveEntry(): Promise<void> {
-  if (!selectedEntry.value) return
+async function saveEntry(event: SubmitEvent): Promise<void> {
+  if (!selectedEntry.value || saving.value || deleting.value) return
+  if (!validate(event.currentTarget as HTMLFormElement)) return
 
   saving.value = true
   actionError.value = null
@@ -63,7 +77,7 @@ async function saveEntry(): Promise<void> {
         method: 'PATCH',
         body: JSON.stringify({
           status: editStatus.value,
-          score: editScore.value,
+          score: editScore.value === '' ? null : editScore.value,
           comment: editComment.value || null,
         }),
       },
@@ -151,7 +165,7 @@ async function removeEntry(): Promise<void> {
         <p class="eyebrow">Editar entrada</p>
         <h2 id="edit-title">{{ selectedEntry.game.title }}</h2>
 
-        <form @submit.prevent="saveEntry">
+        <form novalidate @submit.prevent="saveEntry">
           <label for="edit-status">Status</label>
           <select id="edit-status" v-model="editStatus">
             <option v-for="option in gameStatusOptions" :key="option.value" :value="option.value">
@@ -160,10 +174,26 @@ async function removeEntry(): Promise<void> {
           </select>
 
           <label for="edit-score">Nota <span>(opcional)</span></label>
-          <input id="edit-score" v-model="editScore" type="number" min="1" max="10" />
+          <input
+            id="edit-score"
+            v-model="editScore"
+            v-bind="fieldAttrs('edit-score')"
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+          />
+          <FieldError field="edit-score" :message="errors['edit-score']" />
 
           <label for="edit-comment">Comentário <span>(opcional)</span></label>
-          <textarea id="edit-comment" v-model="editComment" maxlength="5000" rows="4" />
+          <textarea
+            id="edit-comment"
+            v-model="editComment"
+            v-bind="fieldAttrs('edit-comment')"
+            maxlength="5000"
+            rows="4"
+          />
+          <FieldError field="edit-comment" :message="errors['edit-comment']" />
 
           <AuthFormError :message="actionError" />
           <div class="dialog-actions">

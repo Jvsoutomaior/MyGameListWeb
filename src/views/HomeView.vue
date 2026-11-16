@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import FieldError from '@/components/FieldError.vue'
+import { useFormValidation } from '@/composables/useFormValidation'
 
 const router = useRouter()
 const username = ref('')
+const { errors, fieldAttrs, validate } = useFormValidation({
+  'profile-username': { valueMissing: 'Digite o nome de usuário do perfil que deseja visitar.' },
+})
 
-async function visitProfile(): Promise<void> {
+async function visitProfile(event: SubmitEvent): Promise<void> {
+  if (!validate(event.currentTarget as HTMLFormElement)) return
   const normalizedUsername = username.value.trim()
-  if (normalizedUsername) await router.push(`/users/${encodeURIComponent(normalizedUsername)}`)
+  await router.push(`/users/${encodeURIComponent(normalizedUsername)}`)
 }
 </script>
 
@@ -49,12 +55,19 @@ async function visitProfile(): Promise<void> {
         <h2>Conheça o perfil de outro jogador.</h2>
         <p>Digite o nome de usuário exato para consultar sua lista pública.</p>
       </div>
-      <form class="profile-lookup-form" @submit.prevent="visitProfile">
+      <form class="profile-lookup-form" novalidate @submit.prevent="visitProfile">
         <label for="profile-username">Nome de usuário</label>
         <div>
-          <input id="profile-username" v-model="username" placeholder="Ex.: playerone" required />
+          <input
+            id="profile-username"
+            v-model="username"
+            v-bind="fieldAttrs('profile-username')"
+            placeholder="Ex.: playerone"
+            required
+          />
           <button class="secondary-button" type="submit">Visitar perfil</button>
         </div>
+        <FieldError field="profile-username" :message="errors['profile-username']" />
       </form>
     </section>
   </main>

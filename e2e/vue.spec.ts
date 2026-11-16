@@ -89,7 +89,7 @@ test('opens public routes and retries session checks after an HTML response', as
   await expect(page.getByRole('status')).toHaveCount(0)
 })
 
-test('sends the invitation code and explains a rejected invitation', async ({ page }) => {
+test('explains invalid registration fields and a rejected invitation', async ({ page }) => {
   await page.context().addCookies([
     { name: 'XSRF-TOKEN', value: 'csrf-value', domain: 'localhost', path: '/' },
   ])
@@ -114,12 +114,32 @@ test('sends the invitation code and explains a rejected invitation', async ({ pa
   })
 
   await page.goto('/register')
-  await page.getByLabel('Nome de usuário').fill('player')
-  await page.getByLabel('E-mail', { exact: true }).fill('player@example.com')
-  await page.getByLabel('Senha', { exact: true }).fill('password123')
-  await page.getByLabel('Código de convite').fill('Wrong-Code')
-  await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Código de convite inválido')
+  const username = page.getByLabel('Nome de usuário')
+  const email = page.getByLabel('E-mail', { exact: true })
+  const password = page.getByLabel('Senha', { exact: true })
+  const invite = page.getByLabel('Código de convite')
+  const submit = page.getByRole('button', { name: 'Criar conta', exact: true })
+
+  await username.fill('usuário teste')
+  await email.fill('player')
+  await password.fill('123')
+  await submit.click()
+  await expect(username).toBeFocused()
+  await expect(username).toHaveAccessibleDescription(/sem acento/)
+  await expect(email).toHaveAccessibleDescription(/nome@exemplo.com/)
+  await expect(password).toHaveAccessibleDescription(/8 e 128 caracteres/)
+  await expect(invite).toHaveAccessibleDescription(/Digite o código de convite/)
+
+  await username.fill('player')
+  await email.fill('player@example.com')
+  await password.fill('password123')
+  await invite.fill('Wrong-Code')
+  await expect(username).not.toHaveAttribute('aria-invalid', 'true')
+  await submit.click()
+  await expect(invite).toHaveAccessibleDescription(/Código de convite inválido/)
+  await expect(invite).toBeFocused()
+  await invite.fill('New-Code')
+  await expect(invite).not.toHaveAttribute('aria-invalid', 'true')
   await expect(page).toHaveURL('/register')
 })
 
@@ -217,7 +237,13 @@ test('adds a catalog game to the authenticated user list', async ({ page }) => {
   await page.getByRole('button', { name: 'Pesquisar' }).click()
   await page.getByRole('button', { name: 'Adicionar à lista' }).click()
   await page.getByLabel('Status').selectOption('PLAYING')
-  await page.getByLabel('Nota (opcional)').fill('9')
+  const score = page.getByLabel('Nota (opcional)')
+  await score.fill('9.5')
+  await page.getByRole('button', { name: 'Adicionar', exact: true }).click()
+  await expect(score).toHaveAccessibleDescription(/número inteiro de 1 a 10/)
+  await expect(score).toBeFocused()
+  await score.fill('9')
+  await expect(score).not.toHaveAttribute('aria-invalid', 'true')
   await page.getByLabel('Comentário (opcional)').fill('Ótimo RPG')
   await page.getByRole('button', { name: 'Adicionar', exact: true }).click()
 

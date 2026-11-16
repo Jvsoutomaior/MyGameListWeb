@@ -5,7 +5,9 @@ import { useRouter } from 'vue-router'
 import { ApiError, apiRequest } from '@/api/http'
 import type { Game, GameListEntry, GameStatus, Page } from '@/api/types'
 import AuthFormError from '@/components/AuthFormError.vue'
+import FieldError from '@/components/FieldError.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
+import { useFormValidation } from '@/composables/useFormValidation'
 import { gameStatusOptions } from '@/domain/game-status'
 import { useAuthStore } from '@/stores/auth'
 
@@ -24,13 +26,26 @@ const searching = ref(false)
 const searchError = ref<string | null>(null)
 const selectedGame = ref<Game | null>(null)
 const status = ref<GameStatus>('PLAN_TO_PLAY')
-const score = ref<number | null>(null)
+const score = ref<number | '' | null>(null)
 const comment = ref('')
 const adding = ref(false)
 const addError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const visiblePage = computed(() => (searched.value ? resultPage.value : recentPage.value))
 const visibleGames = computed(() => visiblePage.value?.content ?? [])
+const searchValidation = useFormValidation({
+  'game-query': { valueMissing: 'Digite o nome de um jogo ou parte dele para pesquisar.' },
+})
+const scoreMessage = 'Use um número inteiro de 1 a 10 ou deixe a nota em branco.'
+const addValidation = useFormValidation({
+  score: {
+    rangeUnderflow: scoreMessage,
+    rangeOverflow: scoreMessage,
+    stepMismatch: scoreMessage,
+    badInput: scoreMessage,
+  },
+  comment: { tooLong: 'Reduza o comentário para até 5.000 caracteres.' },
+})
 
 async function loadRecentGames(pageNumber: number): Promise<void> {
   const changingPage = recentPage.value !== null
@@ -63,6 +78,7 @@ function changePage(pageNumber: number): void {
 }
 
 function clearSearch(): void {
+  searchValidation.clear()
   query.value = ''
   activeQuery.value = ''
   searched.value = false
@@ -70,9 +86,9 @@ function clearSearch(): void {
   searchError.value = null
 }
 
-async function submitSearch(): Promise<void> {
+async function submitSearch(event: SubmitEvent): Promise<void> {
+  if (searching.value || !searchValidation.validate(event.currentTarget as HTMLFormElement)) return
   const normalizedQuery = query.value.trim()
-  if (!normalizedQuery) return
 
   activeQuery.value = normalizedQuery
   await loadGames(0)
@@ -107,6 +123,7 @@ async function chooseGame(game: Game): Promise<void> {
   }
 
   selectedGame.value = game
+  addValidation.clear()
   status.value = 'PLAN_TO_PLAY'
   score.value = null
   comment.value = ''
@@ -119,8 +136,9 @@ function closeForm(): void {
   addError.value = null
 }
 
-async function addToList(): Promise<void> {
-  if (!selectedGame.value) return
+async function addToList(event: SubmitEvent): Promise<void> {
+  if (!selectedGame.value || adding.value) return
+  if (!addValidation.validate(event.currentTarget as HTMLFormElement)) return
 
   adding.value = true
   addError.value = null
@@ -131,7 +149,7 @@ async function addToList(): Promise<void> {
       body: JSON.stringify({
         gameId: selectedGame.value.id,
         status: status.value,
-        score: score.value,
+        score: score.value === '' ? null : score.value,
         comment: comment.value || null,
       }),
     })
@@ -151,11 +169,12 @@ async function addToList(): Promise<void> {
     <header class="page-heading">
       <p class="eyebrow">Catálogo compartilhado</p>
       <h1>Encontre seu próximo jogo.</h1>
-      <form class="search-form" role="search" @submit.prevent="submitSearch">
+      <form class="search-form" role="search" novalidate @submit.prevent="submitSearch">
         <label class="sr-only" for="game-query">Nome do jogo</label>
         <input
           id="game-query"
           v-model="query"
+          v-bind="searchValidation.fieldAttrs('game-query')"
           type="search"
           placeholder="Ex.: The Witcher 3"
           required
@@ -164,6 +183,7 @@ async function addToList(): Promise<void> {
           {{ searching ? 'Pesquisando…' : 'Pesquisar' }}
         </button>
       </form>
+      <FieldError field="game-query" :message="searchValidation.errors['game-query']" />
       <p class="catalog-attribution">
         Dados e capas dos jogos fornecidos por <a href="https://www.igdb.com/">IGDB.com</a>.
       </p>
@@ -244,7 +264,7 @@ async function addToList(): Promise<void> {
         <p class="eyebrow">Adicionar à lista</p>
         <h2 id="add-title">{{ selectedGame.title }}</h2>
 
-        <form @submit.prevent="addToList">
+        <form novalidate @submit.prevent="addToList">
           <label for="status">Status</label>
           <select id="status" v-model="status">
             <option v-for="option in gameStatusOptions" :key="option.value" :value="option.value">
@@ -253,10 +273,26 @@ async function addToList(): Promise<void> {
           </select>
 
           <label for="score">Nota <span>(opcional)</span></label>
-          <input id="score" v-model="score" type="number" min="1" max="10" />
+          <input
+            id="score"
+            v-model="score"
+            v-bind="addValidation.fieldAttrs('score')"
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+          />
+          <FieldError field="score" :message="addValidation.errors.score" />
 
           <label for="comment">Comentário <span>(opcional)</span></label>
-          <textarea id="comment" v-model="comment" maxlength="5000" rows="4" />
+          <textarea
+            id="comment"
+            v-model="comment"
+            v-bind="addValidation.fieldAttrs('comment')"
+            maxlength="5000"
+            rows="4"
+          />
+          <FieldError field="comment" :message="addValidation.errors.comment" />
 
           <AuthFormError :message="addError" />
           <button class="primary-button" type="submit" :disabled="adding">
