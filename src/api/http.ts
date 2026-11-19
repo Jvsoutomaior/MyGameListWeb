@@ -14,12 +14,14 @@ type CsrfTokenResponse = {
 export class ApiError extends Error {
   readonly status: number
   readonly problem?: ProblemDetail
+  readonly retryAfterSeconds?: number
 
-  constructor(status: number, problem?: ProblemDetail) {
+  constructor(status: number, problem?: ProblemDetail, retryAfterSeconds?: number) {
     super(problem?.detail ?? problem?.title ?? `Request failed with status ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.problem = problem
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
@@ -82,7 +84,15 @@ async function createApiError(response: Response): Promise<ApiError> {
   const problem = contentType.includes('json')
     ? ((await response.json()) as ProblemDetail)
     : undefined
-  return new ApiError(response.status, problem)
+  const retryAfter = response.headers.get('Retry-After')
+  const retryAfterSeconds = retryAfter === null ? undefined : Number(retryAfter)
+  return new ApiError(
+    response.status,
+    problem,
+    retryAfterSeconds !== undefined && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? retryAfterSeconds
+      : undefined,
+  )
 }
 
 function readCookie(name: string): string | undefined {

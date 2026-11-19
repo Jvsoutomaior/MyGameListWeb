@@ -140,7 +140,70 @@ test('explains invalid registration fields and a rejected invitation', async ({ 
   await expect(invite).toBeFocused()
   await invite.fill('New-Code')
   await expect(invite).not.toHaveAttribute('aria-invalid', 'true')
+  await page.route('**/api/users', (route) =>
+    route.fulfill({
+      status: 429,
+      headers: { 'Retry-After': '125', 'Access-Control-Expose-Headers': 'Retry-After' },
+      json: { title: 'Too many registration attempts' },
+    }),
+  )
+  await submit.click()
+  await expect(page.getByRole('alert')).toHaveText(
+    'Muitas tentativas de cadastro. Aguarde 3 minutos e tente novamente.',
+  )
+  await expect(email).toHaveValue('player@example.com')
   await expect(page).toHaveURL('/register')
+})
+
+test('confirms registration by email before offering login', async ({ page }) => {
+  await page.context().addCookies([
+    { name: 'XSRF-TOKEN', value: 'csrf-value', domain: 'localhost', path: '/' },
+  ])
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ status: 401, json: {} }),
+  )
+  await page.route('**/api/auth/csrf', (route) =>
+    route.fulfill({ json: { token: 'csrf-value', headerName: 'X-XSRF-TOKEN' } }),
+  )
+  const pending = {
+    email: 'player@example.com',
+    expiresAt: new Date(Date.now() + 600000).toISOString(),
+    emailSent: true,
+  }
+  await page.route('**/api/users', (route) =>
+    route.fulfill({ status: 202, json: pending }),
+  )
+  await page.route('**/api/users/resend-code', (route) =>
+    route.fulfill({ status: 202, json: pending }),
+  )
+  let confirmations = 0
+  await page.route('**/api/users/verify-email', (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      email: pending.email,
+      code: confirmations === 0 ? '11111111' : '22222222',
+    })
+    confirmations++
+    return confirmations === 1
+      ? route.fulfill({ status: 400, json: { detail: 'Invalid or expired verification code' } })
+      : route.fulfill({ status: 204 })
+  })
+  await page.goto('/register')
+  await page.getByLabel('Nome de usuário').fill('player')
+  await page.getByLabel('E-mail', { exact: true }).fill(pending.email)
+  await page.getByLabel('Senha', { exact: true }).fill('password123')
+  await page.getByLabel('Código de convite').fill('invite')
+  await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Confirme seu e-mail' })).toBeVisible()
+  await page.getByLabel('Código de confirmação').fill('11111111')
+  await page.getByRole('button', { name: 'Confirmar cadastro' }).click()
+  await expect(page.getByRole('alert')).toContainText('Código incorreto')
+  await page.getByRole('button', { name: 'Reenviar código' }).click()
+  await expect(page.getByLabel('Código de confirmação')).toHaveValue('')
+  await page.getByLabel('Código de confirmação').fill('22222222')
+  await page.getByRole('button', { name: 'Confirmar cadastro' }).click()
+  await expect(page.getByRole('heading', { name: 'E-mail confirmado' })).toBeVisible()
+  await page.locator('main').getByRole('link', { name: 'Entrar', exact: true }).click()
+  await expect(page).toHaveURL('/login')
 })
 
 test('shows the home page and navigates to login', async ({ page }) => {

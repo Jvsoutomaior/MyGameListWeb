@@ -6,6 +6,7 @@ import type { User } from '@/api/types'
 
 type LoginCredentials = { email: string; password: string }
 type Registration = LoginCredentials & { username: string; invitationCode: string }
+export type PendingRegistration = { email: string; expiresAt: string; emailSent: boolean }
 type SessionStatus = 'pending' | 'verified' | 'unavailable'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -45,12 +46,11 @@ export const useAuthStore = defineStore('auth', () => {
     sessionStatus.value = 'verified'
   }
 
-  async function register(registration: Registration): Promise<void> {
-    await apiRequest<User>('/api/users', {
+  async function register(registration: Registration): Promise<PendingRegistration> {
+    return apiRequest<PendingRegistration>('/api/users', {
       method: 'POST',
       body: JSON.stringify(registration),
     })
-    await login({ email: registration.email, password: registration.password })
   }
 
   async function logout(): Promise<void> {
