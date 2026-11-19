@@ -89,7 +89,7 @@ test('opens public routes and retries session checks after an HTML response', as
   await expect(page.getByRole('status')).toHaveCount(0)
 })
 
-test('explains invalid registration fields and a rejected invitation', async ({ page }) => {
+test('explains invalid registration fields and an email already in use', async ({ page }) => {
   await page.context().addCookies([
     { name: 'XSRF-TOKEN', value: 'csrf-value', domain: 'localhost', path: '/' },
   ])
@@ -104,12 +104,11 @@ test('explains invalid registration fields and a rejected invitation', async ({ 
       username: 'player',
       email: 'player@example.com',
       password: 'password123',
-      invitationCode: 'Wrong-Code',
     })
     await route.fulfill({
-      status: 400,
+      status: 409,
       contentType: 'application/problem+json',
-      body: JSON.stringify({ detail: 'Invalid invitation code' }),
+      body: JSON.stringify({ detail: 'Email is already in use' }),
     })
   })
 
@@ -117,7 +116,6 @@ test('explains invalid registration fields and a rejected invitation', async ({ 
   const username = page.getByLabel('Nome de usuário')
   const email = page.getByLabel('E-mail', { exact: true })
   const password = page.getByLabel('Senha', { exact: true })
-  const invite = page.getByLabel('Código de convite')
   const submit = page.getByRole('button', { name: 'Criar conta', exact: true })
 
   await username.fill('usuário teste')
@@ -128,18 +126,14 @@ test('explains invalid registration fields and a rejected invitation', async ({ 
   await expect(username).toHaveAccessibleDescription(/sem acento/)
   await expect(email).toHaveAccessibleDescription(/nome@exemplo.com/)
   await expect(password).toHaveAccessibleDescription(/8 e 128 caracteres/)
-  await expect(invite).toHaveAccessibleDescription(/Digite o código de convite/)
 
   await username.fill('player')
   await email.fill('player@example.com')
   await password.fill('password123')
-  await invite.fill('Wrong-Code')
   await expect(username).not.toHaveAttribute('aria-invalid', 'true')
   await submit.click()
-  await expect(invite).toHaveAccessibleDescription(/Código de convite inválido/)
-  await expect(invite).toBeFocused()
-  await invite.fill('New-Code')
-  await expect(invite).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(email).toHaveAccessibleDescription(/Este e-mail já está em uso/)
+  await email.fill('player@example.com')
   await page.route('**/api/users', (route) =>
     route.fulfill({
       status: 429,
@@ -191,7 +185,6 @@ test('confirms registration by email before offering login', async ({ page }) =>
   await page.getByLabel('Nome de usuário').fill('player')
   await page.getByLabel('E-mail', { exact: true }).fill(pending.email)
   await page.getByLabel('Senha', { exact: true }).fill('password123')
-  await page.getByLabel('Código de convite').fill('invite')
   await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Confirme seu e-mail' })).toBeVisible()
   await page.getByLabel('Código de confirmação').fill('11111111')

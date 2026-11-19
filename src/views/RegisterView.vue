@@ -11,7 +11,6 @@ const auth = useAuthStore()
 const username = ref('')
 const email = ref('')
 const password = ref('')
-const invitationCode = ref('')
 const errorMessage = ref<string | null>(null)
 const submitting = ref(false)
 const pending = ref<PendingRegistration | null>(null)
@@ -73,7 +72,6 @@ async function resendCode(): Promise<void> {
 const usernameFormat = 'Use até 30 letras sem acento, números ou sublinhados (_), sem espaços.'
 const emailFormat = 'Use um endereço no formato nome@exemplo.com, com até 254 caracteres.'
 const passwordLength = 'Use entre 8 e 128 caracteres na senha.'
-const invitationLength = 'Confira o código recebido e use até 128 caracteres.'
 const { errors, fieldAttrs, validate, fieldError } = useFormValidation({
   username: {
     valueMissing: 'Digite um nome de usuário.',
@@ -85,10 +83,6 @@ const { errors, fieldAttrs, validate, fieldError } = useFormValidation({
     valueMissing: 'Digite uma senha.',
     tooShort: passwordLength,
     tooLong: passwordLength,
-  },
-  'invitation-code': {
-    valueMissing: 'Digite o código de convite que você recebeu.',
-    tooLong: invitationLength,
   },
 })
 
@@ -103,17 +97,10 @@ async function submit(event: SubmitEvent): Promise<void> {
       username: username.value,
       email: email.value,
       password: password.value,
-      invitationCode: invitationCode.value,
     })
   } catch (error) {
     const invalidFields = error instanceof ApiError ? error.problem?.errors : undefined
-    if (error instanceof ApiError && error.message === 'Invalid invitation code') {
-      fieldError(
-        form,
-        'invitation-code',
-        'Código de convite inválido. Confira o código recebido e tente novamente.',
-      )
-    } else if (error instanceof ApiError && error.message === 'Username is already in use') {
+    if (error instanceof ApiError && error.message === 'Username is already in use') {
       fieldError(form, 'username', 'Este nome de usuário já está em uso. Escolha outro.')
     } else if (error instanceof ApiError && error.message === 'Email is already in use') {
       fieldError(
@@ -121,16 +108,10 @@ async function submit(event: SubmitEvent): Promise<void> {
         'email',
         'Este e-mail já está em uso. Entre na sua conta ou use outro e-mail.',
       )
-    } else if (
-      invalidFields?.username ||
-      invalidFields?.email ||
-      invalidFields?.password ||
-      invalidFields?.invitationCode
-    ) {
+    } else if (invalidFields?.username || invalidFields?.email || invalidFields?.password) {
       if (invalidFields.username) fieldError(form, 'username', usernameFormat)
       if (invalidFields.email) fieldError(form, 'email', emailFormat)
       if (invalidFields.password) fieldError(form, 'password', passwordLength)
-      if (invalidFields.invitationCode) fieldError(form, 'invitation-code', invitationLength)
     } else if (error instanceof ApiError && error.status === 429) {
       const minutes = Math.ceil((error.retryAfterSeconds ?? 60) / 60)
       errorMessage.value = `Muitas tentativas de cadastro. Aguarde ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'} e tente novamente.`
@@ -205,8 +186,8 @@ async function submit(event: SubmitEvent): Promise<void> {
         <p class="eyebrow">Comece sua lista</p>
         <h1>Crie sua conta</h1>
         <p class="supporting-text">
-          Registre o que jogou e compartilhe sua lista com outras pessoas. Para criar uma conta,
-          você precisa de um código de convite.
+          Registre o que jogou e compartilhe sua lista com outras pessoas. Confirme seu e-mail para
+          ativar a conta.
         </p>
 
         <form novalidate @submit.prevent="submit">
@@ -246,19 +227,6 @@ async function submit(event: SubmitEvent): Promise<void> {
             required
           />
           <FieldError field="password" :message="errors.password" />
-
-          <label for="invitation-code">Código de convite</label>
-          <input
-            id="invitation-code"
-            v-model="invitationCode"
-            v-bind="fieldAttrs('invitation-code')"
-            autocomplete="off"
-            autocapitalize="none"
-            :spellcheck="false"
-            maxlength="128"
-            required
-          />
-          <FieldError field="invitation-code" :message="errors['invitation-code']" />
 
           <AuthFormError :message="errorMessage" />
           <button class="primary-button" type="submit" :disabled="submitting">

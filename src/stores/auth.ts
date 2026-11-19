@@ -5,7 +5,7 @@ import { ApiError, apiRequest, clearCsrfToken, refreshCsrfToken } from '@/api/ht
 import type { User } from '@/api/types'
 
 type LoginCredentials = { email: string; password: string }
-type Registration = LoginCredentials & { username: string; invitationCode: string }
+type Registration = LoginCredentials & { username: string }
 export type PendingRegistration = { email: string; expiresAt: string; emailSent: boolean }
 type SessionStatus = 'pending' | 'verified' | 'unavailable'
 
